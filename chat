@@ -1,2 +1,7 @@
+/.netlify/functions/categorize_observation.js:1 
+        
+        
+       Failed to load resource: the server responded with a status of 404 (Not Found)Understand this errorAI
+app.js:55 Error: SyntaxError: Unexpected end of JSON input
+    at HTMLButtonElement.<anonymous> (app.js:37:35)
 
-gfhgfh
