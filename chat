@@ -1,13 +1,1 @@
-Creator7717-safety-observation-chatbot/:1 Access to fetch at 'https://your_netlify_site.netlify.app/.netlify/functions/categorize_observation' from origin 'https://creator7717.github.io' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.Understand this errorAI
-your_netlify_site.netlify.app/.netlify/functions/categorize_observation:1 
-        
-        
-       Failed to load resource: net::ERR_FAILEDUnderstand this errorAI
-app.js:55 Error: TypeError: Failed to fetch
-    at HTMLButtonElement.<anonymous> (app.js:28:30)
-
-Failed to load resource: net::ERR_FAILEDUnderstand this errorAI
-app.js:55 Error: TypeError: Failed to fetch
-
-app.js:55 Error: TypeError: Failed to fetch
-    at HTMLButtonElement.<anonymous> (app.js:28:30)
+https://venerable-daifuku-1d7b8a.netlify.app/
