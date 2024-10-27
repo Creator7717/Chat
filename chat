@@ -1,159 +1,371 @@
-// api/categorize_observation.js
- 
-module.exports = async function handler(request, response) {
-  // Set CORS headers
-  response.setHeader('Access-Control-Allow-Origin', 'https://creator7717.github.io'); // Update this to your frontend domain
-  response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
- 
-  // Handle preflight OPTIONS request
-  if (request.method === 'OPTIONS') {
-    return response.status(200).end();
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;1,700&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+.welcome {
+  position: absolute;
+  top: 50%;
+  left: 40%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  z-index: 1;
+  @media (max-width: 991px) {
+    font-size: 2rem;
   }
- 
-  if (request.method !== 'POST') {
-    return response.status(405).json({ error: 'Method not allowed' });
+  @media (max-width: 767px) {
+    font-size: 1.5rem;
   }
- 
-  // Parse the observation from the request body
-  let observation;
-  try {
-    observation = request.body.observation;
-  } catch (error) {
-    console.error('Error parsing request body:', error);
-    return response.status(400).json({ error: 'Invalid request body.' });
+  @media (max-width: 575px) {
+    font-size: 1.2rem;
   }
- 
-  if (!observation) {
-    return response.status(400).json({ error: 'No observation provided.' });
+  @media (max-width: 375px) {
+    font-size: 1rem;
   }
- 
-  // Your OpenAI API key
-  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
- 
-  // Categories data embedded directly in the code
-  const categoriesData = {
-    "categories": [
-      {
-        "code": "3a",
-        "name": "Plant Upkeep",
-        "subcategories": [
-          {
-            "code": "3a.1",
-            "name": "Leakage",
-            "items": [
-              { "code": "3a.1.1", "name": "Air" },
-              { "code": "3a.1.2", "name": "Oil" },
-              { "code": "3a.1.3", "name": "Water" },
-              { "code": "3a.1.4", "name": "Steam" },
-              { "code": "3a.1.5", "name": "Chemical" },
-              { "code": "3a.1.6", "name": "Gas" },
-              { "code": "3a.1.7", "name": "Polymer" }
-            ]
-          },
-          // Include all other subcategories and items...
-        ]
-      },
-      // Include all other categories...
-    ]
-  };
- 
-  // Convert categories JSON to text format
-  function categoriesToText(categories) {
-    let text = '';
-    categories.forEach(category => {
-      text += `- ${category.code}: ${category.name}\n`;
-      category.subcategories.forEach(subcategory => {
-        text += `  - ${subcategory.code}: ${subcategory.name}\n`;
-        subcategory.items.forEach(item => {
-          text += `    - ${item.code}: ${item.name}\n`;
-        });
-      });
-    });
-    return text;
-  }
- 
-  const categoriesText = categoriesToText(categoriesData.categories);
- 
-  // Prepare the messages for OpenAI Chat Completion
-  const messages = [
-    {
-      "role": "system",
-      "content": `You are an assistant that categorizes safety observations into predefined categories, subcategories, and items based on the provided list.`
-    },
-    {
-      "role": "user",
-      "content": `
-Given the following safety observation: "${observation}", identify the most appropriate category, subcategory, and item from the provided list.
- 
-Categories:
-${categoriesText}
- 
-Respond with the codes and names in the following format:
-Category Code - Category Name > Subcategory Code - Subcategory Name > Item Code - Item Name.
-`
-    }
-  ];
- 
-  try {
-    // Call the OpenAI Chat Completions API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4', // Use 'gpt-3.5-turbo' if 'gpt-4' is not available
-        messages: messages,
-        max_tokens: 150,
-        temperature: 0
-      })
-    });
- 
-    const data = await openaiResponse.json();
- 
-    if (data.error) {
-      console.error('OpenAI API error:', data.error);
-      return response.status(500).json({ error: data.error.message });
-    }
- 
-    const resultText = data.choices[0].message.content.trim();
- 
-    // Parse the result
-    const parsedResult = parseResult(resultText);
- 
-    return response.status(200).json({ result: parsedResult });
-  } catch (error) {
-    console.error('Error:', error);
-    return response.status(500).json({ error: 'An error occurred while processing your observation.' });
-  }
-};
- 
-// Function to parse the OpenAI response into structured data
-function parseResult(resultText) {
-  // Expected format:
-  // Category Code - Category Name > Subcategory Code - Subcategory Name > Item Code - Item Name
- 
-  const parts = resultText.split('>');
-  if (parts.length === 3) {
-    const [categoryPart, subcategoryPart, itemPart] = parts.map(part => part.trim());
- 
-    const [categoryCode, categoryName] = categoryPart.split('-', 2).map(str => str.trim());
-    const [subcategoryCode, subcategoryName] = subcategoryPart.split('-', 2).map(str => str.trim());
-    const [itemCode, itemName] = itemPart.split('-', 2).map(str => str.trim());
- 
-    return {
-      categoryCode,
-      categoryName,
-      subcategoryCode,
-      subcategoryName,
-      itemCode,
-      itemName
-    };
-  } else {
-    // If the format is unexpected, return the raw text
-    return { rawResult: resultText };
+  @media (max-width: 320px) {
+    font-size: 0.8rem;
   }
 }
- 
+
+.container {
+  height: 100vh;
+  width: 100%;
+  background: linear-gradient(45deg, #d2001a, #7462ff, #f48e21, #23d5ab);
+  background-size: 300%, 300%;
+  animation: color 12s ease-in-out infinite;
+}
+
+@keyframes color {
+  0% {
+    background-position: 0 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.chatbot-toggler {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  outline: none;
+  border: none;
+  height: 40px;
+  width: 40px;
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #4aa017;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 128px 0 rgba(0, 0, 0, 0.1),
+    0 32px 64px -48px rgba(0, 0, 0, 0.5);
+  &:hover {
+    background: #4aa017;
+  }
+  svg path {
+    fill: #fff;
+  }
+  @media (max-width: 991px) {
+    bottom: 20px;
+    right: 20px;
+  }
+  @media (max-width: 767px) {
+    bottom: 20px;
+    right: 20px;
+  }
+  @media (max-width: 575px) {
+    bottom: 20px;
+    right: 20px;
+  }
+  @media (max-width: 375px) {
+    bottom: 20px;
+    right: 20px;
+  }
+  @media (max-width: 320px) {
+    bottom: 20px;
+    right: 20px;
+  }
+}
+body.show-chatbot .chatbot-toggler {
+  transform: rotate(90deg);
+  background: #4aa017;
+}
+.chatbot-toggler span {
+  color: #fff;
+  position: absolute;
+  font-size: 1.2rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.chatbot-toggler span:last-child,
+body.show-chatbot .chatbot-toggler span:first-child {
+  opacity: 0;
+}
+body.show-chatbot .chatbot-toggler span:last-child {
+  opacity: 1;
+}
+
+.chatbot {
+  position: fixed;
+  right: 70px;
+  bottom: 80px;
+  overflow: hidden;
+  width: 340px;
+  height: 520px;
+  transform: scale(0.5);
+  opacity: 0;
+  pointer-events: none;
+  background: #fff;
+  transform-origin: bottom right;
+  border-radius: 15px;
+  box-shadow: 0 0 128px 0 rgba(0, 0, 0, 0.1),
+    0 32px 64px -48px rgba (0, 0, 0, 0.5);
+  transition: all 0.1s ease;
+}
+
+body.show-chatbot .chatbot {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+/* ChatBot */
+.chatbot header {
+  background: #4aa017;
+  position: relative;
+  color: #fff;
+  padding: 15px 0;
+  text-align: center;
+  border-radius: 15px 15px 0 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.chatbot header span {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  display: none;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+@media screen and (max-width: 992px) {
+  .chatbot header span {
+    display: block;
+  }
+}
+.chatbot header span svg {
+  height: 20px;
+  width: 20px;
+  fill: #fff;
+}
+.chatbot header span:hover {
+  opacity: 0.8;
+}
+.chatbot header span:first-child {
+  right: 55px;
+}
+.chatbot header span:last-child {
+  right: 15px;
+}
+
+.chatbot header h2 {
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.chatbot .chatbox {
+  overflow-y: auto;
+  padding: 15px 10px 8px;
+  height: 400px;
+  background: #fff;
+  border-radius: 0 0 15px 15px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+}
+.chatbox .chat {
+  display: flex;
+  list-style: none;
+  margin: -1px 0 0;
+}
+.chatbot :where(.chatbox, textarea)::-webkit-scrollbar {
+  width: 6px;
+}
+.chatbot :where(.chatbox, textarea)::-webkit-scrollbar-track {
+  background: #fff;
+  border-radius: 25px;
+}
+.chatbot :where(.chatbox, textarea)::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 25px;
+}
+.chatbot :where(.chatbox, textarea)::-webkit-scrollbar-thumb:hover {
+  background: #b3b3b3;
+}
+
+.chatbox .incoming span {
+  height: 30px;
+  width: 30px;
+  color: #fff;
+  align-self: flex-end;
+  background: #4aa017;
+  text-align: center;
+  line-height: 32px;
+  border-radius: 5px;
+  margin: 0 8px 2px 0;
+}
+
+.chatbox .outgoing {
+  margin: 20px 0;
+  justify-content: flex-end;
+  font-size: 0.8rem;
+}
+.chatbox .chat p {
+  color: #fff;
+  font-size: 0.9rem;
+  max-width: 75%;
+  padding: 5px 10px;
+  border-radius: 10px 10px 0 10px;
+  background: #4aa017;
+  line-height: 1.3;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.chatbox .incoming p {
+  color: black;
+  font-size: 0.9rem;
+  background: #f2f2f2;
+  border-radius: 10px 10px 10px 0;
+  text-align: left;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.chatbox .chat p.error {
+  color: #721c24;
+  background: #f8d7da;
+}
+
+.chatbox .chat p.error::before {
+  content: "!";
+  color: #721c24;
+  font-weight: 600;
+  margin-right: 5px;
+}
+
+.chatbox .chat p.error::after {
+  content: "!";
+  color: #721c24;
+  font-weight: 600;
+  margin-left: 5px;
+}
+
+.chatbox .chat p.error {
+  color: #721c24;
+  background: #f8d7da;
+}
+@media (max-width: 375px) and (-webkit-min-device-pixel-ratio: 2),
+  (max-width: 375px) and (min-device-pixel-ratio: 2) {
+  .chatbox .chat p.error {
+    background: #f8d7da;
+    color: #721c24;
+  }
+}
+
+.chatbot .chat-input {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  gap: 5px;
+  background: #fff;
+  padding: 5px 20px;
+  border-top: 1px solid #ccc;
+}
+
+.chat-input textarea {
+  height: 55px;
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  resize: none;
+  padding: 16px 15px 16px 0;
+  border-radius: 5px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.chat-input span {
+  align-self: flex-end;
+  height: 40px;
+  line-height: 55px;
+  color: #4aa017;
+  font-size: 1.35rem;
+  cursor: pointer;
+  visibility: hidden;
+  transition: 0.3s ease;
+  justify-content: flex-end;
+}
+
+.chat-input textarea:valid ~ span {
+  visibility: visible;
+}
+@media (max-width: 767px) {
+  .chatbot {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    bottom: 0;
+    right: 0;
+  }
+  .chatbot header {
+    border-radius: 0;
+  }
+  .chatbot .chat-input {
+    position: relative;
+  }
+  .chatbot .chat-input textarea {
+    padding: 16px 15px 16px 0;
+  }
+  .chatbot .chat-input span {
+    height: 55px;
+    line-height: 55px;
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .chatbot {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    bottom: 0;
+    right: 0;
+  }
+  .chatbot header {
+    border-radius: 0;
+  }
+  .chatbot .chat-input {
+    position: relative;
+  }
+  .chatbot .chat-input textarea {
+    padding: 16px 15px 16px 0;
+  }
+  .chatbot .chat-input span {
+    height: 55px;
+    line-height: 55px;
+    font-size: 1.35rem;
+  }
+}
